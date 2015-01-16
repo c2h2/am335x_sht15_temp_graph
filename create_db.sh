@@ -1,7 +1,7 @@
 #!/bin/bash
-rrdtool create temp_humi.rrd --start N --step 300 \
-DS:temp:GAUGE:600:U:U \
-DS:humi:GAUGE:600:U:U \
+rrdtool create temp_humi.rrd --start N --step 10 \
+DS:temp:GAUGE:300:U:U \
+DS:humi:GAUGE:300:U:U \
 RRA:AVERAGE:0.5:1:12 \
 RRA:AVERAGE:0.5:1:288 \
 RRA:AVERAGE:0.5:12:168 \
