@@ -1,0 +1,3 @@
+Interfacing ariaboard.com am335x with SHT15 temperature and humidity sensors as a collector, rrdtool as storage and graph tool.
+
+![Alt text](http://full/path/to/img.jpg "Optional title")
