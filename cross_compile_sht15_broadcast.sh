@@ -1,1 +1,1 @@
-arm-linux-gnueabihf-gcc -o sht15_boradcast sht15_boradcast.c
+arm-linux-gnueabihf-gcc -o sht15_broadcast sht15_broadcast.c

@@ -20,6 +20,10 @@
 #include <arpa/inet.h>  /* for sockaddr_in */
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <netpacket/packet.h>
+#include <net/if.h>
 
 #define NETWORK_SEND 1
 #define DEBUG 1
@@ -41,6 +45,7 @@ struct sockaddr_in broadcastAddr; /* Broadcast address */
 char *broadcastIP="224.0.0.1";                /* IP broadcast address */
 unsigned short broadcastPort=2222;     /* Server port */
 int broadcastPermission;          /* Socket opt to set permission to broadcast */
+static void lplib_command_first_ethernet_card_data_get(char **ip, char **mac);
 
 
 int main(int argc, char **argv){
@@ -90,6 +95,75 @@ int net_broadcast(char* send_string){
 }
 
 
+static void lplib_command_first_ethernet_card_data_get(char **ip, char **mac) {
+    struct ifaddrs *ifap, *ifa;
+    const char *name = NULL;
+    struct sockaddr_ll *s;
+    struct sockaddr_in *sa;
+    unsigned int i, len;
+    char macaddr[32] = {0};
+    char ipaddr[20] = {0};
+    int gotip = 0, gotmac = 0;
+    getifaddrs(&ifap);
+    for(ifa=ifap;ifa!=NULL;ifa=ifa->ifa_next)
+    {
+        if(ifa->ifa_addr!=NULL && (ifa->ifa_flags & IFF_UP))
+        {
+            if(name!=NULL && strcmp(ifa->ifa_name, name)!=0)
+            {
+                continue;
+            }
+            if(strncmp(ifa->ifa_name, "eth", 3)!=0 &&
+                strncmp(ifa->ifa_name, "p", 1)!=0)
+            {
+                continue;
+            }
+            if(name==NULL)
+            {
+                name = ifa->ifa_name;
+            }
+            if(ifa->ifa_addr->sa_family==AF_PACKET)
+            {
+                s = (struct sockaddr_ll*)ifa->ifa_addr;
+                len = 0;
+                for(i=0;i<6;i++)
+                {
+                    len+=snprintf(macaddr+len, 31-len, "%02X", s->sll_addr[i]);
+                }
+                gotmac = 1;
+                if(mac!=NULL && *mac==NULL)
+                {
+                    *mac = strdup(macaddr);
+                }
+            }
+            else if(ifa->ifa_addr->sa_family==AF_INET)
+            {
+                sa = (struct sockaddr_in *)ifa->ifa_addr;
+                memset(ipaddr, 0, 20);
+                inet_ntop(AF_INET, &sa->sin_addr, ipaddr, 19);
+                gotip = 1;
+                if(ip!=NULL && *ip==NULL)
+                {
+                    *ip = strdup(ipaddr);
+                }
+            }
+        }
+        if(gotip && gotmac)
+        {
+            break;
+        }
+    }
+    freeifaddrs(ifap);
+    if(ip!=NULL && *ip==NULL)
+    {
+        *ip = strdup("0.0.0.0");
+    }
+    if(mac!=NULL && *mac==NULL)
+    {
+        *mac = strdup("000000000000");
+    }
+}
+
 /*read spi value and return 3 bytes.
   the function will always stay in loop unless any change of 3 bytes occurs.
 */
@@ -100,6 +174,11 @@ int read_sht15(){
 
 	FILE * temp_file;// = fopen( TEMP_FILE, "r" );
 	FILE * humi_file;// = fopen( HUMI_FILE, "r" );
+
+	//get mac address
+        char *mac = NULL;
+        lplib_command_first_ethernet_card_data_get(NULL, &mac);
+
 
 	while(1){
 		
@@ -114,10 +193,10 @@ int read_sht15(){
 			humi = atoi(buff)/1000.0;
 			fclose(humi_file);
 
-			sprintf(buff, "TEMP:%.2f,HUMI:%.2f\n", temp, humi);
+			sprintf(buff, "TEMP:%.2f,HUMI:%.2f,MAC:%s\n", temp, humi, mac);
 			printf(buff, "%s\n", buff);
 		}else{
-			sprintf(buff, "TEMP:ERR,HUMI:ERR");
+			sprintf(buff, "TEMP:ERR,HUMI:ERR,MAC:%s", mac);
 		}
 
 #if NETWORK_SEND
