@@ -174,15 +174,21 @@ int read_sht15(){
 
 	FILE * temp_file;// = fopen( TEMP_FILE, "r" );
 	FILE * humi_file;// = fopen( HUMI_FILE, "r" );
-
+	FILE * temp_err_file;
+	int err=0;
 	//get mac address
         char *mac = NULL;
-        lplib_command_first_ethernet_card_data_get(NULL, &mac);
+        char *ip = NULL;
+        lplib_command_first_ethernet_card_data_get(&ip, &mac);
+	
 
 
 	while(1){
-		
-		if(1){
+		temp_err_file = fopen( TEMP_ERR_FILE, "r");
+		fscanf(temp_err_file, "%s", buff);
+		fclose(temp_err_file);
+
+		if (buff[0]=='0'){
 			temp_file = fopen( TEMP_FILE, "r" );
 			fscanf(temp_file, "%s", buff);
 			temp = atoi(buff)/1000.0;
@@ -193,11 +199,12 @@ int read_sht15(){
 			humi = atoi(buff)/1000.0;
 			fclose(humi_file);
 
-			sprintf(buff, "TEMP:%.2f,HUMI:%.2f,MAC:%s\n", temp, humi, mac);
-			printf(buff, "%s\n", buff);
+			sprintf(buff, "TEMP:%.2f,HUMI:%.2f,MAC:%s,IP:%s\n", temp, humi, mac, ip);
 		}else{
-			sprintf(buff, "TEMP:ERR,HUMI:ERR,MAC:%s", mac);
+			sprintf(buff, "TEMP:ERR,HUMI:ERR,MAC:%s,IP:%s\n", mac, ip);
 		}
+
+		printf(buff, "%s\n", buff);
 
 #if NETWORK_SEND
 		net_broadcast(buff);
