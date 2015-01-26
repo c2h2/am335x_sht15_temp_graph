@@ -27,7 +27,7 @@
 
 #define NETWORK_SEND 1
 #define DEBUG 1
-#define READ_UINTERVAL 5000000 //5 second
+#define READ_UINTERVAL 1000 * 1000 * 10 //10 second
 #define TEMP_FILE "/sys/devices/platform/sht15/temp1_input"
 #define TEMP_ERR_FILE "/sys/devices/platform/sht15/temp1_fault"
 #define HUMI_FILE "/sys/devices/platform/sht15/humidity1_input"
@@ -176,14 +176,14 @@ int read_sht15(){
 	FILE * humi_file;// = fopen( HUMI_FILE, "r" );
 	FILE * temp_err_file;
 	int err=0;
-	//get mac address
-        char *mac = NULL;
-        char *ip = NULL;
-        lplib_command_first_ethernet_card_data_get(&ip, &mac);
 	
-
-
 	while(1){
+		//get mac address
+	        char *mac = NULL;
+        	char *ip = NULL;
+		
+        	lplib_command_first_ethernet_card_data_get(&ip, &mac);
+
 		temp_err_file = fopen( TEMP_ERR_FILE, "r");
 		fscanf(temp_err_file, "%s", buff);
 		fclose(temp_err_file);
@@ -209,6 +209,8 @@ int read_sht15(){
 #if NETWORK_SEND
 		net_broadcast(buff);
 #endif
+		free(ip);
+		free(mac);
 		usleep(READ_UINTERVAL);
     	}
 	return 0;
